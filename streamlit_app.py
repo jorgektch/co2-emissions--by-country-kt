@@ -7,7 +7,7 @@ from sklearn.metrics import r2_score
 # Cargar los datos del archivo Excel
 @st.cache_data
 def load_data():
-    file_path = '/mnt/data/co2-emissions-by-country-kt.xlsx'
+    file_path = 'co2-emissions-by-country-kt.xlsx'
     data = pd.read_excel(file_path)
     return data
 
