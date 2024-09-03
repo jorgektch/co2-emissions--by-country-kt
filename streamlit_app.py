@@ -48,7 +48,8 @@ y = country_data['CO2 Emissions'].values
 # Dividir los datos en entrenamiento y prueba (80% - 20%)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Diccionario para almacenar resultados de cada modelo
+# Diccionario para almacenar modelos y sus resultados
+models = {}
 results = {}
 
 # Función para calcular métricas
@@ -62,6 +63,7 @@ def calculate_metrics(model, X_test, y_test):
 # 1. Regresión Lineal
 linear_model = LinearRegression()
 linear_model.fit(X_train, y_train)
+models['Linear Regression'] = linear_model
 results['Linear Regression'] = calculate_metrics(linear_model, X_test, y_test)
 
 # 2. Regresión Polinomial (grado 2)
@@ -70,30 +72,36 @@ X_train_poly = poly_features.fit_transform(X_train)
 X_test_poly = poly_features.transform(X_test)
 poly_model = LinearRegression()
 poly_model.fit(X_train_poly, y_train)
+models['Polynomial Regression (degree 2)'] = poly_model
 results['Polynomial Regression (degree 2)'] = calculate_metrics(poly_model, X_test_poly, y_test)
 
 # 3. Regresión con Árboles de Decisión
 tree_model = DecisionTreeRegressor(random_state=42)
 tree_model.fit(X_train, y_train)
+models['Decision Tree Regression'] = tree_model
 results['Decision Tree Regression'] = calculate_metrics(tree_model, X_test, y_test)
 
 # 4. Bosques Aleatorios
 forest_model = RandomForestRegressor(n_estimators=100, random_state=42)
 forest_model.fit(X_train, y_train)
+models['Random Forest Regression'] = forest_model
 results['Random Forest Regression'] = calculate_metrics(forest_model, X_test, y_test)
 
 # 5. Gradient Boosting
 gboost_model = GradientBoostingRegressor(random_state=42)
 gboost_model.fit(X_train, y_train)
+models['Gradient Boosting'] = gboost_model
 results['Gradient Boosting'] = calculate_metrics(gboost_model, X_test, y_test)
 
 # 6. AdaBoost
 adaboost_model = AdaBoostRegressor(random_state=42)
 adaboost_model.fit(X_train, y_train)
+models['AdaBoost'] = adaboost_model
 results['AdaBoost'] = calculate_metrics(adaboost_model, X_test, y_test)
 
 # Selección del mejor modelo basado en R²
 best_model_name = max(results, key=lambda k: results[k][0])
+best_model = models[best_model_name]
 best_model_metrics = results[best_model_name]
 
 # Mostrar resultados
@@ -103,9 +111,6 @@ st.write(f"MSE: {best_model_metrics[1]:.2f}")
 st.write(f"RMSE: {best_model_metrics[2]:.2f}")
 
 # Graficar los resultados del mejor modelo
-best_model = eval(f'{best_model_name.lower().replace(" ", "_").replace("(degree_2)", "_poly")}')
-
-# Generar predicciones
 if 'Polynomial' in best_model_name:
     y_pred = best_model.predict(poly_features.transform(X))
 else:
