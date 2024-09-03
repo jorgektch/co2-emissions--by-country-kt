@@ -133,6 +133,17 @@ else:
         plt.legend()
         st.pyplot(plt)
 
+    # Mostrar la tabla comparativa de las métricas de todos los modelos
+    st.subheader("Tabla Comparativa de Modelos")
+
+    # Crear un dataframe con los resultados
+    results_df = pd.DataFrame.from_dict(results, orient='index')
+    results_df.columns = ['R²', 'MSE', 'RMSE', 'Predicciones']  # Renombrar columnas, si es necesario
+    results_df = results_df.drop(columns=['Predicciones'])  # Eliminar la columna de predicciones
+
+    # Mostrar la tabla
+    st.dataframe(results_df)
+
     # Mostrar el mejor modelo
     st.subheader("Mejor Modelo Seleccionado")
     st.write(f"**{best_model_name}**")
