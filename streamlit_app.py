@@ -2,10 +2,13 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression, LogisticRegression
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, AdaBoostRegressor
+from sklearn.metrics import r2_score, mean_squared_error
+import math
 
 # Cargar los datos del archivo Excel
 @st.cache_data
@@ -15,13 +18,13 @@ def load_data():
     return data
 
 # Configuración inicial de Streamlit
-st.title("Análisis de Emisiones de CO2 por país (1960 - 2016)")
-st.write("Seleccione un país para visualizar las emisiones de CO2 y comparar diferentes modelos de regresión.")
+st.title("Emisiones de CO2 por país (1960 - 2016)")
+st.write("Seleccione un país para visualizar las emisiones de CO2 y realizar el análisis de regresión.")
 
 # Cargar los datos
 data = load_data()
 
-# Obtener la lista de países (primer columna)
+# Obtener la lista de países
 countries = data['Country Name'].unique()
 
 # Crear un widget para seleccionar el país
@@ -38,67 +41,81 @@ country_data['CO2 Emissions'] = country_data['CO2 Emissions'].astype(float)
 st.write(f"Datos de emisiones de CO2 para {country_selected}:")
 st.dataframe(country_data)
 
-# Preparar los datos para el análisis
+# Preparar los datos para la regresión
 X = country_data['Year'].values.reshape(-1, 1)
 y = country_data['CO2 Emissions'].values
 
-# Dividir los datos en entrenamiento (80%) y test (20%)
+# Dividir los datos en entrenamiento y prueba (80% - 20%)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Modelos de regresión
-models = {}
+# Diccionario para almacenar resultados de cada modelo
+results = {}
 
-# Regresión Lineal
+# Función para calcular métricas
+def calculate_metrics(model, X_test, y_test):
+    y_pred = model.predict(X_test)
+    r2 = r2_score(y_test, y_pred)
+    mse = mean_squared_error(y_test, y_pred)
+    rmse = math.sqrt(mse)
+    return r2, mse, rmse
+
+# 1. Regresión Lineal
 linear_model = LinearRegression()
 linear_model.fit(X_train, y_train)
-y_pred_linear = linear_model.predict(X_test)
-r2_linear = r2_score(y_test, y_pred_linear)
-mse_linear = mean_squared_error(y_test, y_pred_linear)
-rmse_linear = np.sqrt(mse_linear)
-models['Lineal'] = {'model': linear_model, 'r2': r2_linear, 'mse': mse_linear, 'rmse': rmse_linear}
+results['Linear Regression'] = calculate_metrics(linear_model, X_test, y_test)
 
-# Regresión Polinomial (Grado 2)
-poly = PolynomialFeatures(degree=2)
-X_poly_train = poly.fit_transform(X_train)
-X_poly_test = poly.transform(X_test)
+# 2. Regresión Polinomial (grado 2)
+poly_features = PolynomialFeatures(degree=2)
+X_train_poly = poly_features.fit_transform(X_train)
+X_test_poly = poly_features.transform(X_test)
 poly_model = LinearRegression()
-poly_model.fit(X_poly_train, y_train)
-y_pred_poly = poly_model.predict(X_poly_test)
-r2_poly = r2_score(y_test, y_pred_poly)
-mse_poly = mean_squared_error(y_test, y_pred_poly)
-rmse_poly = np.sqrt(mse_poly)
-models['Polinomial'] = {'model': poly_model, 'r2': r2_poly, 'mse': mse_poly, 'rmse': rmse_poly}
+poly_model.fit(X_train_poly, y_train)
+results['Polynomial Regression (degree 2)'] = calculate_metrics(poly_model, X_test_poly, y_test)
 
-# Regresión Logística
-logistic_model = LogisticRegression(max_iter=10000)
-logistic_model.fit(X_train, y_train.astype(int))  # Convertir a enteros para la regresión logística
-y_pred_logistic = logistic_model.predict(X_test)
-r2_logistic = r2_score(y_test.astype(int), y_pred_logistic)
-mse_logistic = mean_squared_error(y_test, y_pred_logistic)
-rmse_logistic = np.sqrt(mse_logistic)
-models['Logística'] = {'model': logistic_model, 'r2': r2_logistic, 'mse': mse_logistic, 'rmse': rmse_logistic}
+# 3. Regresión con Árboles de Decisión
+tree_model = DecisionTreeRegressor(random_state=42)
+tree_model.fit(X_train, y_train)
+results['Decision Tree Regression'] = calculate_metrics(tree_model, X_test, y_test)
 
-# Seleccionar el mejor modelo basado en R²
-best_model_name = max(models, key=lambda x: models[x]['r2'])
-best_model = models[best_model_name]
+# 4. Bosques Aleatorios
+forest_model = RandomForestRegressor(n_estimators=100, random_state=42)
+forest_model.fit(X_train, y_train)
+results['Random Forest Regression'] = calculate_metrics(forest_model, X_test, y_test)
+
+# 5. Gradient Boosting
+gboost_model = GradientBoostingRegressor(random_state=42)
+gboost_model.fit(X_train, y_train)
+results['Gradient Boosting'] = calculate_metrics(gboost_model, X_test, y_test)
+
+# 6. AdaBoost
+adaboost_model = AdaBoostRegressor(random_state=42)
+adaboost_model.fit(X_train, y_train)
+results['AdaBoost'] = calculate_metrics(adaboost_model, X_test, y_test)
+
+# Selección del mejor modelo basado en R²
+best_model_name = max(results, key=lambda k: results[k][0])
+best_model_metrics = results[best_model_name]
 
 # Mostrar resultados
-st.write(f"**Mejor modelo:** {best_model_name}")
-st.write(f"R²: {best_model['r2']:.2f}")
-st.write(f"MSE: {best_model['mse']:.2f}")
-st.write(f"RMSE: {best_model['rmse']:.2f}")
+st.write(f"Mejor modelo: {best_model_name}")
+st.write(f"R²: {best_model_metrics[0]:.2f}")
+st.write(f"MSE: {best_model_metrics[1]:.2f}")
+st.write(f"RMSE: {best_model_metrics[2]:.2f}")
 
-# Graficar las emisiones de CO2 y la predicción del mejor modelo
+# Graficar los resultados del mejor modelo
+best_model = eval(f'{best_model_name.lower().replace(" ", "_").replace("(degree_2)", "_poly")}')
+
+# Generar predicciones
+if 'Polynomial' in best_model_name:
+    y_pred = best_model.predict(poly_features.transform(X))
+else:
+    y_pred = best_model.predict(X)
+
 plt.figure(figsize=(10, 6))
 plt.scatter(country_data['Year'], country_data['CO2 Emissions'], color='blue', label='Datos reales')
-
-if best_model_name == 'Polinomial':
-    plt.plot(X_test, best_model['model'].predict(poly.transform(X_test)), color='red', label='Mejor modelo (Polinomial)')
-else:
-    plt.plot(X_test, best_model['model'].predict(X_test), color='red', label=f'Mejor modelo ({best_model_name})')
-
+plt.plot(country_data['Year'], y_pred, color='red', label=f'{best_model_name}')
 plt.xlabel('Año')
 plt.ylabel('Emisiones de CO2 (kt)')
-plt.title(f'Emisiones de CO2 en {country_selected}')
+plt.title(f'Emisiones de CO2 en {country_selected} - {best_model_name}')
 plt.legend()
 st.pyplot(plt)
