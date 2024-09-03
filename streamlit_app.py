@@ -58,7 +58,7 @@ def calculate_metrics(model, X_test, y_test):
     r2 = r2_score(y_test, y_pred)
     mse = mean_squared_error(y_test, y_pred)
     rmse = math.sqrt(mse)
-    return r2, mse, rmse
+    return r2, mse, rmse, y_pred
 
 # 1. Regresión Lineal
 linear_model = LinearRegression()
@@ -104,20 +104,46 @@ best_model_name = max(results, key=lambda k: results[k][0])
 best_model = models[best_model_name]
 best_model_metrics = results[best_model_name]
 
-# Mostrar resultados
-st.write(f"Mejor modelo: {best_model_name}")
+# Mostrar gráficos y resultados de todos los modelos
+st.subheader("Comparación de Modelos")
+
+for model_name, metrics in results.items():
+    r2, mse, rmse, y_pred = metrics
+    st.write(f"**{model_name}**")
+    st.write(f"R²: {r2:.2f}")
+    st.write(f"MSE: {mse:.2f}")
+    st.write(f"RMSE: {rmse:.2f}")
+    
+    plt.figure(figsize=(10, 6))
+    plt.scatter(country_data['Year'], country_data['CO2 Emissions'], color='blue', label='Datos reales')
+    
+    if 'Polynomial' in model_name:
+        y_pred_full = models[model_name].predict(poly_features.transform(X))
+    else:
+        y_pred_full = models[model_name].predict(X)
+    
+    plt.plot(country_data['Year'], y_pred_full, color='red', label=f'{model_name}')
+    plt.xlabel('Año')
+    plt.ylabel('Emisiones de CO2 (kt)')
+    plt.title(f'Emisiones de CO2 en {country_selected} - {model_name}')
+    plt.legend()
+    st.pyplot(plt)
+
+# Mostrar el mejor modelo
+st.subheader("Mejor Modelo Seleccionado")
+st.write(f"**{best_model_name}**")
 st.write(f"R²: {best_model_metrics[0]:.2f}")
 st.write(f"MSE: {best_model_metrics[1]:.2f}")
 st.write(f"RMSE: {best_model_metrics[2]:.2f}")
 
-# Graficar los resultados del mejor modelo
+plt.figure(figsize=(10, 6))
+plt.scatter(country_data['Year'], country_data['CO2 Emissions'], color='blue', label='Datos reales')
+
 if 'Polynomial' in best_model_name:
     y_pred = best_model.predict(poly_features.transform(X))
 else:
     y_pred = best_model.predict(X)
 
-plt.figure(figsize=(10, 6))
-plt.scatter(country_data['Year'], country_data['CO2 Emissions'], color='blue', label='Datos reales')
 plt.plot(country_data['Year'], y_pred, color='red', label=f'{best_model_name}')
 plt.xlabel('Año')
 plt.ylabel('Emisiones de CO2 (kt)')
